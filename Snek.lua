@@ -2,19 +2,24 @@ MoveKeys = {[keys.A] = {xD = -1, yD = 0}, [keys.D] = {xD = 1, yD = 0},
 			[keys.W] = {xD = 0, yD = -1}, [keys.S] = {xD = 0, yD = 1}}
 --Body
 body = {xD = 0, yD = 0}
+
 --Snek
 Snek = {head = {xD = 0, yD = 0}, body = {}, move = {xD = 1, yD = 0}, comeu = false}
+
 -- Food
 Food = {xD = 0, yD = 0}
+
 -- Grid variables 
 grid = {}
 gridinfo = {xD = 0, yD = 0, width = 0, length = 0}
 gridFill = 0
 sqrDimensions = {xD = 0, yD = 0}
+
 --time control
 time_buff = 0.00001
 fps = 5
 time_period = 1/fps
+
 --Terminate variable
 endthisshit = false
 
@@ -159,15 +164,14 @@ function Update_V2(f)
 	a = math.floor(rp%256)
 	b = math.floor((rp/256)%256)
 	c = math.floor((rp/(256*256))%256)
+	
 	Clear(colors.WHITE)
-	DrawString(gridinfo.width/2, gridinfo.length/2, "SHITASS", Pixel(a,b,c), 1)
-	if(KeyHold(keys.T)) then
-		Update = function() return false end
-	end
+	DrawCentralS(gridinfo.width/2, gridinfo.length/2, "SHITASS", Pixel(a,b,c), 1)
+	
+	Update = (KeyHold(keys.T) and (function() return false end)) or Update
 	return true
 end
 
 if(Construct(256,256,1,1)) then
 	Start()
 end
-
