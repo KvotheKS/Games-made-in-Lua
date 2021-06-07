@@ -4,7 +4,7 @@ MoveKeys = {[keys.A] = {xD = -1, yD = 0}, [keys.D] = {xD = 1, yD = 0},
 body = {xD = 0, yD = 0}
 
 --Snek
-Snek = {head = {xD = 0, yD = 0}, body = {}, move = {xD = 1, yD = 0}, comeu = false}
+Snek = {head = {xD = 0, yD = 0}, body = {}, move = {xD = 1, yD = 0}, buffer = {},comeu = false}
 
 -- Food
 Food = {xD = 0, yD = 0}
@@ -26,6 +26,41 @@ endthisshit = false
 --Variable to hold update function
 Update = nil
 
+--tuned button
+DButton = {current = {xD = 0, yD = 0}, times = 0}
+
+function DButton:new(fVertex, Dimen, name, bkgcol, textcol, fn)
+	self = Button:new(fVertex, Dimen, name, bkgcol, textcol, fn)
+	print(self.fVertex.xD)
+	self.current = {xD = 0, yD = 0}
+	self.times = 0
+	print(self, self.times)
+	return self
+end
+
+function DB_DrawCentralized(self)
+	local x = self.fVertex.xD - self.Dimen.xD
+	local y = self.fVertex.yD - self.Dimen.yD
+	FillRect(x, y, self.Dimen.xD*2, self.Dimen.yD*2, self.bkgcol)
+	DrawRect(x, y, self.Dimen.xD*2, self.Dimen.yD*2, colors.BLACK)
+	DrawCentralS(self.fVertex.xD, self.fVertex.yD, self.name, self.textcol, 1) 
+
+end
+
+--all buttons used in main screen
+MainButtons = {}
+
+--initializes buttons
+function init_MB()
+	local w = math.floor(gridinfo.width*0.5)
+	local h = math.floor(gridinfo.length*0.6)
+	local wD = math.floor(gridinfo.width*0.2)
+	local hD = math.floor(gridinfo.length*0.2)
+	local TempB = DButton:new({xD = w,yD= h},{xD = wD, yD = hD}, "Jogo",
+		colors.WHITE, colors.YELLOW, (function() Update = Update_V1 end))
+	table.insert(MainButtons, TempB)	
+end
+
 function body:new(xD, yD)
 	t = {}
 	setmetatable(t, self)
@@ -35,9 +70,12 @@ function body:new(xD, yD)
 	return t
 end
 
+
 function recv_input()
 	for k,v in pairs(MoveKeys) do
-		if(KeyPressed(k)) then
+		if(KeyPressed(k) and
+			(Snek.buffer.xD*v.xD == 0) and
+			(Snek.buffer.yD*v.yD == 0)) then
 			Snek.move = v
 			break
 		end
@@ -53,6 +91,7 @@ function comeu()
 end
 
 function move()
+	Snek.buffer = Snek.move
 	if(Snek.comeu) then
 		local xD = (#Snek.body > 0 and Snek.body[#Snek.body].xD) or Snek.head.xD
 		local yD = (#Snek.body > 0 and Snek.body[#Snek.body].yD) or Snek.head.yD
@@ -115,9 +154,7 @@ function genFood()
 end
 
 function terminou()
-	if(endthisshit) then
-		Update = Update_V2		
-	end
+	Update = (endthisshit and (Update_V2)) or Update
 end
 
 function Create()
@@ -141,8 +178,21 @@ function Create()
 	Snek.move = MoveKeys[keys.D]
 
 	genFood()
-	
-	Update = Update_V1
+	init_MB()
+
+	Update = Update_V0
+	return true
+end
+
+function Update_V0(f)
+	Clear(colors.WHITE)
+	local w = math.floor(gridinfo.width*0.5)
+	local l = math.floor(gridinfo.length*0.3)
+	for _,v in pairs(MainButtons) do
+		DB_DrawCentralized(v)
+	end
+	DrawCentralS(w,l, "COBRINHA", colors.GREEN, 2)
+	Update = (KeyPressed(keys.T) and (Update_V1)) or Update
 	return true
 end
 
@@ -167,7 +217,7 @@ function Update_V2(f)
 	
 	Clear(colors.WHITE)
 	DrawCentralS(gridinfo.width/2, gridinfo.length/2, "SHITASS", Pixel(a,b,c), 1)
-	
+
 	Update = (KeyHold(keys.T) and (function() return false end)) or Update
 	return true
 end
