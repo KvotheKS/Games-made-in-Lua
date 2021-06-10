@@ -23,28 +23,47 @@ time_period = 1/fps
 --Terminate variable
 endthisshit = false
 
---Variable to hold update function
+--Variable to hold update function	
 Update = nil
 
 --tuned button
-DButton = {current = {xD = 0, yD = 0}, times = 0}
+DButton = Button:new()
 
 function DButton:new(fVertex, Dimen, name, bkgcol, textcol, fn)
-	self = Button:new(fVertex, Dimen, name, bkgcol, textcol, fn)
-	print(self.fVertex.xD)
-	self.current = {xD = 0, yD = 0}
+	tbl = {}  
+	setmetatable(tbl, self)
+	self.__index = self
+	self.fVertex.xD = (fVertex and fVertex.xD) or 0
+	self.fVertex.yD = (fVertex and fVertex.yD) or 0
+
+	self.Dimen.xD = (Dimen and Dimen.xD) or 0
+	self.Dimen.yD = (Dimen and Dimen.yD) or 0
+	self.name = name or ""
+	self.bkgcol = bkgcol or colors.WHITE
+	self.textcol = textcol or colors.BLACK
+	self.fn = fn
 	self.times = 0
-	print(self, self.times)
-	return self
+	return tbl
 end
 
-function DB_DrawCentralized(self)
-	local x = self.fVertex.xD - self.Dimen.xD
-	local y = self.fVertex.yD - self.Dimen.yD
-	FillRect(x, y, self.Dimen.xD*2, self.Dimen.yD*2, self.bkgcol)
-	DrawRect(x, y, self.Dimen.xD*2, self.Dimen.yD*2, colors.BLACK)
-	DrawCentralS(self.fVertex.xD, self.fVertex.yD, self.name, self.textcol, 1) 
+function DButton:DrawCentralized(m)
+	m = m or {xD = GetMouseX(), yD = GetMouseY()}
+	if(self:is_hovering(m)) then
+		if(self.times < 20) then
+			self.times = self.times + 1
+		end
+	else
+		self.times = 0
+	end 
 
+	local tam = (100-self.times)/100
+	local Dx = math.floor(self.Dimen.xD*tam)
+	local Dy = math.floor(self.Dimen.yD*tam)
+	local x = self.fVertex.xD - Dx
+	local y = self.fVertex.yD - Dy
+	FillRect(x, y, Dx*2, Dy*2, self.bkgcol)
+	DrawRect(x, y, Dx*2, Dy*2, colors.BLACK)
+	DrawCentralS(self.fVertex.xD, self.fVertex.yD, self.name, self.textcol, 1)
 end
 
 --all buttons used in main screen
@@ -59,6 +78,14 @@ function init_MB()
 	local TempB = DButton:new({xD = w,yD= h},{xD = wD, yD = hD}, "Jogo",
 		colors.WHITE, colors.YELLOW, (function() Update = Update_V1 end))
 	table.insert(MainButtons, TempB)	
+	w = w + wD + math.floor(gridinfo.width*0.15)
+	wD = math.floor(gridinfo.width*0.1)
+	hD = math.floor(gridinfo.length*0.1)
+	
+	local TempB2 = DButton:new({xD = w,yD= h},{xD = wD, yD = hD}, "Config",
+		colors.WHITE, colors.YELLOW, (function() Update = Config end))
+	print(MainButtons[1].name)
+	table.insert(MainButtons, TempB2)	
 end
 
 function body:new(xD, yD)
@@ -189,7 +216,9 @@ function Update_V0(f)
 	local w = math.floor(gridinfo.width*0.5)
 	local l = math.floor(gridinfo.length*0.3)
 	for _,v in pairs(MainButtons) do
-		DB_DrawCentralized(v)
+		v:DrawCentralized()
+		v:activate()
+
 	end
 	DrawCentralS(w,l, "COBRINHA", colors.GREEN, 2)
 	Update = (KeyPressed(keys.T) and (Update_V1)) or Update
