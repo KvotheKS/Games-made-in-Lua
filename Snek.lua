@@ -1,3 +1,5 @@
+loadfile("auxB.lua")()
+
 MoveKeys = {[keys.A] = {xD = -1, yD = 0}, [keys.D] = {xD = 1, yD = 0},
 			[keys.W] = {xD = 0, yD = -1}, [keys.S] = {xD = 0, yD = 1}}
 --Body
@@ -20,57 +22,137 @@ time_buff = 0.00001
 fps = 5
 time_period = 1/fps
 
---Terminate variable
-endthisshit = false
+--all buttons used in main screen
+MainButtons = {}
+
+--Config Buttons
+ConfigButtons = {}
+
+--Table that holds game configs
+Memories = {}
+layerStk = 0
 
 --Variable to hold update function	
 Update = nil
 
---tuned button
-DButton = Button:new()
-DButton.__index = DButton
+--Terminate variable
+endthisshit = false
 
-function DButton:new(fVertexs, Dimen, name, bkgcol, textcol, fn)
-	return setmetatable({
-		fVertex = {xD = (fVertexs and fVertexs.xD) or 0,
-				   yD = (fVertexs and fVertexs.yD) or 0},
+
+--tuned button
+
+SCButton = CButton:new()
+SCButton.__index = SCButton
+
+function SCButton:new(fxD, Dimen, name, bkgcol, textcol, key, typef)
+		return setmetatable({
+		fxD = fxD or 0,
 		Dimen = {xD = (Dimen and Dimen.xD) or 0,
 			     yD = (Dimen and Dimen.yD) or 0},
 		name = name or "",
 		bkgcol = bkgcol or colors.WHITE,
 		textcol = textcol or colors.BLACK,
-		fn = fn,
-		times = 0
+		key = key,
+		cBuff = false,
+		type = typef or 1,
+		tBuff = ""
 	}, self)
 end
-
-function DButton:DrawCentralized(m)
-	local m = m or {xD = GetMouseX(), yD = GetMouseY()}
 	
-	if(self:is_hovering(m)) then
-		if(self.times < 20) then
-			self.times = self.times + 1
-		end
-	else
-		self.times = 0
-	end 
-
-	local tam = (100-self.times)/100
-	local Dx = math.floor(self.Dimen.xD*tam)
-	local Dy = math.floor(self.Dimen.yD*tam)
-	local x = self.fVertex.xD - Dx
-	local y = self.fVertex.yD - Dy
-
-	FillRect(x, y, Dx*2, Dy*2, self.bkgcol)
-	DrawRect(x, y, Dx*2, Dy*2, colors.BLACK)
-	DrawCentralS(self.fVertex.xD, self.fVertex.yD, self.name, self.textcol, 1)
+function SCButton:cBuffCheck(mouse)
+	local flag = (not self.cBuff and self:activate(mouse))
+	self.cBuff = self.cBuff or (dequeuePBuffer() and flag)
 end
 
---all buttons used in main screen
-MainButtons = {}
+function SCButton:analyze()
+	local p = (self.type == 1 and keys[self.tBuff] and self.tBuff)
+	p = p or (colors[self.tBuff] or tonumber(self.tBuff))
+	if(p) then
+		self.key = p
+	end
+	self.tBuff = ""
+end
+
+function SCButton:updateSCB(yd)
+	local act = ((self.type == 1 and not self.cBuff and (self:printCol(yd)))) or (self:print(yd))
+end
+
+
+function SCButton:updateBuff()
+	if(not self.cBuff) then return end
+	local scp = dequeuePBuffer()
+	for _,v in pairs(scp) do
+		if(v == '\n') then
+			self:analyze()
+			return false
+		end
+		self.tBuff = self.tBuff .. string.format("%c", v)
+	end
+	return true
+end
+
+function SCButton:print(yD)
+	local x = self.fxD - self.Dimen.xD
+	local y = yD - self.Dimen.yD
+	local lW = math.floor(self.Dimen.xD*0.8)
+
+	FillRect(x,y,lW,self.Dimen.yD*2, self.bkgcol)
+	DrawRect(x,y,lW,self.Dimen.yD*2, colors.BLACK)
+	
+	DrawCentralS(x + math.floor(lW*0.5), yD, self.name, self.textcol, 1)
+	DrawCentralS(self.fxD, yD, "-->", self.textcol, 1)
+
+	x = self.fxD + math.floor(self.Dimen.xD*0.2)
+	y = yD + self.Dimen.yD
+	DrawLine(x, y, x + math.floor(self.Dimen.xD*0.8), y, self.bkgcol)
+
+	x = x + math.floor(self.Dimen.xD*0.4)
+	DrawCentralS(x, y - 5, (self.cBuff and self.tBuff) or self.key, self.textcol, 1)	
+end
+
+function SCButton:printCol(yd)
+	local x = self.fxD - self.Dimen.xD
+	local y = yD - self.Dimen.yD
+	local lW = math.floor(self.Dimen.xD*0.8)
+
+	FillRect(x,y,lW,self.Dimen.yD*2, self.bkgcol)
+	DrawRect(x,y,lW,self.Dimen.yD*2, colors.BLACK)
+	
+	DrawCentralS(x + math.floor(lW*0.5), yD, self.name, self.textcol, 1)
+	DrawCentralS(self.fxD, yD, "-->", self.textcol, 1)
+
+	x = self.fxD + math.floor(self.Dimen.xD*0.2)
+	FillRect(x, y, lW, self.Dimen.yD*2, self.key)
+	return true
+end
+
+--TO-DO ---> config file
+function initConfig()
+	Memories = {
+		["Bkg"] = colors.MAGENTA,
+		["Snek"] = colors.GREEN,
+		["Food"] = colors.RED,
+		["Up"] = "W",
+		["Down"] = "S",
+		["Left"] = "A",
+		["Right"] = "D"
+	}
+end
+--(fxD, Dimen, name, bkgcol, textcol, key, typef)
+function initConfigMenu()
+	local fxd = {math.floor(gridinfo.width*0.28), math.floor(gridinfo.length*0.72)}
+	local Dimen = {xD = math.floor(gridinfo.width*0.22),
+				   yD = math.floor(gridinfo.length*0.12)} 
+	local i = 0
+	for k, v in pairs(Memories) do
+		table.insert(ConfigButtons, SCButton:new(fxd[i%2 + 1], Dimen, 
+									k,colors.WHITE, colors.BLACK, v, (type(v) == string and 2) or 1))
+	end
+end
+
 
 --initializes buttons
-function init_MB()
+function initMB()
 	local w = math.floor(gridinfo.width*0.5)
 	local h = math.floor(gridinfo.length*0.6)
 	local wD = math.floor(gridinfo.width*0.2)
@@ -88,7 +170,6 @@ function init_MB()
 	local TempB2 = DButton:new({xD = w,yD= h}, {xD = wD, yD = hD}, "Config",
 		colors.WHITE, colors.YELLOW, (function() Update = Config end))
 	
-
 	table.insert(MainButtons, TempB2)	
 end
 
@@ -156,7 +237,7 @@ function move()
 	grid[p] = false
 end
 
-function print_snek()
+function printSnek()
 	FillRect(Snek.head.xD, Snek.head.yD, sqrDimensions.xD, sqrDimensions.yD, colors.GREEN)
 	DrawRect(Snek.head.xD, Snek.head.yD, sqrDimensions.xD, sqrDimensions.yD, colors.WHITE)
 	
@@ -166,11 +247,11 @@ function print_snek()
 	end
 end
 
-function print_M()
+function printM()
 	Clear(colors.MAGENTA)
 	FillRect(Food.xD, Food.yD, sqrDimensions.xD, sqrDimensions.yD, colors.RED)
 	DrawRect(Food.xD, Food.yD, sqrDimensions.xD, sqrDimensions.yD, colors.BLACK)
-	print_snek()
+	printSnek()
 end
 
 function genFood()
@@ -188,8 +269,22 @@ function terminou()
 	Update = (endthisshit and (Update_V2)) or Update
 end
 
-function Config()
-	 
+function Config(f)
+	
+	ConfigButtons[i]:cBuffCheck({xD = GetMouseX(), yD = GetMouseY()})
+	ConfigButtons[i]:updateBuff()
+	
+
+	Clear(colors.BLACK)
+	local ceiling = (layerStk*2) + 6
+	local j, yD = 0, math.floor(gridinfo.length*0.12)
+	for i = (layerStk*2)+ 1, ceiling do
+		if(i > #ConfigButtons) then
+			break
+		end
+		yD = yD + (j ~= 0 and j%2 == 0 and math.floor(gridinfo.length*0.3))
+		ConfigButtons[i]:updateSCB(yD)
+	end
 end
 
 function Create()
@@ -238,7 +333,7 @@ function Update_V1(f)
 	if(time_buff >= time_period) then
 		time_buff = time_buff - time_period
 		move()
-		print_M()
+		printM()
 		comeu()
 		terminou()
 	end
